@@ -85,7 +85,7 @@ const FL_IC = { ok: 'check-circle', err: 'x-circle', warn: 'alert', info: 'shiel
 const N = (h, ic, t, on) => `<a class="${on ? 'on' : ''}" href="${h}">${I(ic)}${t}</a>`;
 const navs = {
   public: a => N('#/host', 'user', '혼주·상주', a === 'host') + N('#/venue', 'scan', '제휴 식장', a === 'venue') + N('#/admin', 'chart', '운영 관리', a === 'admin') + N('#/support', 'help', '고객센터', a === 'support'),
-  host: a => N('#/host', 'list', '내 행사', a === 'list') + N('#/host/new', 'plus', '행사 등록', a === 'new') + N('#/host/bank', 'bank', '정산 계좌', a === 'bank') + `<a href="#/" data-logout="host">${I('logout')}로그아웃</a>`,
+  host: a => N('#/host', 'home', '홈', a === 'list') + N('#/host/new', 'plus', '안내장 만들기', a === 'new') + N('#/host/settings', 'settings', '설정', a === 'bank' || a === 'settings') + `<a href="#/" data-logout="host">${I('logout')}로그아웃</a>`,
   admin: a => [['', 'chart', '대시보드'], ['/events', 'calendar', '행사'], ['/alerts', 'shield', '이상거래'], ['/inquiries', 'inbox', '민원'], ['/audit', 'file', '감사 로그'], ['/settings', 'sliders', '기준값']]
     .map(([p, ic, l]) => N('#/admin' + p, ic, l, a === p)).join('') + `<a href="#/" data-logout="admin">${I('logout')}로그아웃</a>`,
 };
@@ -94,6 +94,7 @@ function page(area, navHtml, body, narrow = false) {
   <main class="wrap ${narrow ? 'narrow' : ''}">${flashes.map(([k, m]) => `<div class="flash ${k}">${I(FL_IC[k] || 'check-circle')}<div>${esc(m)}</div></div>`).join('')}${body}</main>`;
 }
 const routes = [];
+const qp = (h, o) => h + '?' + new URLSearchParams(o).toString();
 const route = (re, fn) => routes.push([re, fn]);
 function go(h) { if (location.hash === h) render(); else location.hash = h; return ''; }
 
@@ -144,33 +145,6 @@ ${tour.map(([ic, t, s, h], i) => `<a href="${h}" class="who" style="padding:10px
 route(/^\/reset$/, () => { seed(); flash('데모 데이터를 초기 상태로 되돌렸습니다.'); return go('#/'); });
 
 /* ── 하객 ─────────────────────────────────────────────────── */
-route(/^\/i\/(\w+)$/, ([c]) => {
-  const e = evByCode(c);
-  if (!e || !['published', 'cancelled'].includes(e.status)) return page('경조금 간편 수납', navs.public(''), `<div class="card" style="text-align:center;padding:40px">${ibox('lock')}<h2 style="margin-top:14px">공개되지 않은 행사입니다</h2><p class="muted">식장 확인이 진행 중이거나 주소가 올바르지 않습니다.</p><a class="btn ghost" href="#/">처음으로</a></div>`, true);
-  const v = venue(e.venue), t = totals(e), word = GIFT_WORD[e.kind];
-  return page('경조금 간편 수납', navs.public(''), `
-<div class="inv"><div class="cover ${e.kind === 'funeral' ? 'funeral' : ''}"><div class="emb">${I(KIND_IC[e.kind], 'lg')}</div><div class="eyebrow">${KIND[e.kind]}</div><h1>${esc(e.title)}</h1>
-<span class="chip">${I('shield')}식장 확인 완료</span></div>
-<div class="meta"><div>${I('calendar')}<span>${kdate(e.date)}<br><b>${e.time}</b></span></div><div>${I('map')}<span>${esc(v.name)}<br><b>${esc(e.hall)}</b></span></div></div>
-${e.message ? `<div class="msg">${esc(e.message)}</div>` : ''}
-<div class="badges"><span class="chip l">${I('lock')}연락처·계좌 비공개</span><span class="chip l">${I('rotate')}정산 전 취소 가능</span><span class="chip l">${I('bank')}본인 명의 계좌 정산</span></div></div>
-${e.status === 'cancelled' ? `<div class="flash err mt">${I('x-circle')}<div>취소된 행사입니다. 결제하신 금액은 전액 자동 취소되었습니다.</div></div>` : `
-<form class="card mt" data-form="pay" data-code="${e.code}"><div class="card-h">${ibox('credit-card', 'dark')}<div><h2>${word} 보내기</h2><div class="xs muted">${t.count}명이 마음을 전했습니다</div></div></div>
-<label>결제 금액</label><input class="amount-in" name="amount" type="number" min="10000" step="1000" required placeholder="0">
-<div class="amounts">${(e.kind === 'funeral' ? [30000, 50000, 100000, 200000] : [50000, 100000, 200000, 300000]).map(a => `<button type="button" data-amount="${a}">${man(a)}</button>`).join('')}</div>
-<div class="limits"><div><small>1회 한도</small><b>${man(set('limit_per_gift'))}</b></div><div><small>월 한도</small><b>${man(set('limit_guest_monthly'))}</b></div><div><small>할부</small><b>최대 3개월</b></div></div>
-<div class="row2"><div><label>보내는 분</label><input name="name" required placeholder="성명"></div><div><label>관계</label><input name="rel" placeholder="예: 대학 동기"></div></div>
-<div class="row2"><div><label>생년월일</label><input name="birth" required pattern="\\d{8}" placeholder="YYYYMMDD" inputmode="numeric"></div><div><label>휴대폰 번호</label><input name="phone" required placeholder="010-0000-0000" inputmode="tel"></div></div>
-<label>전하실 말씀 <span class="muted" style="font-weight:400">(선택)</span></label><textarea name="msg" maxlength="300" placeholder="${e.kind === 'funeral' ? '삼가 고인의 명복을 빕니다.' : '결혼을 진심으로 축하드립니다.'}"></textarea>
-<div class="sect" style="margin:22px 0 4px">${ibox('credit-card', '', true)}<h3>카드 정보</h3>${pill('모의 결제', 'nodot')}</div>
-<label>카드번호</label><input name="card" required inputmode="numeric" placeholder="0000 0000 0000 0000">
-<div class="row2"><div><label>유효기간</label><input name="exp" required placeholder="MM/YY"></div><div><label>할부</label><select name="inst"><option value="0">일시불</option><option value="2">2개월</option><option value="3">3개월</option></select></div></div>
-<label class="check" style="margin-top:14px"><input type="checkbox" name="corp" data-toggle="corpbox"> 법인카드 결제 (경조금 지급확인서 발급)</label>
-<div id="corpbox" style="display:none"><input name="corp_name" placeholder="법인명"></div>
-<div class="policy"><div>${I('rotate')}<b>정산 전</b>즉시 취소</div><div>${I('x-circle')}<b>행사 취소 시</b>전액 자동 취소</div><div>${I('send')}<b>정산 후</b>반환 요청</div></div>
-<label class="check" style="margin-top:16px"><input type="checkbox" name="agree" required> 이용약관, 개인정보 수집·이용 및 취소·환불 정책에 동의합니다.</label>
-<button class="btn block mt">${I('lock')}결제하기</button></form>`}`, true);
-});
 route(/^\/g\/(\d+)$/, ([id]) => {
   const g = gift(id); if (!g) return go('#/');
   const e = ev(g.event_id), v = venue(e.venue), word = GIFT_WORD[e.kind];
@@ -209,22 +183,6 @@ route(/^\/support$/, () => page('고객센터', navs.public('support'), `<div cl
 
 /* ── 혼주·상주 ────────────────────────────────────────────── */
 const me = () => user(S.session.host);
-route(/^\/host$/, () => {
-  const u = me();
-  if (!u) return page('혼주·상주', navs.public('host'), `${stepper(['본인인증', '정산 계좌', '행사 등록', '식장 확인'], 0)}
-<form class="card mt" data-form="host-login"><div class="card-h">${ibox('smartphone', 'dark')}<div><h2>휴대폰 본인인증</h2><div class="xs muted">정산은 본인인증을 완료한 혼주·상주 본인에게만 지급됩니다.</div></div></div>
-<label>성명</label><input name="name" required value="김지은"><label>생년월일</label><input name="birth" required value="19940312"><label>휴대폰 번호</label><input name="phone" required value="010-1234-5678">
-<div class="flash info mt">${I('lock')}<div class="small">주민등록번호는 수집하지 않습니다. 다른 데모 계정 — 박민수 19700521 010-2345-6789 · 이선호 19881102 010-3456-7890</div></div>
-<label class="check"><input type="checkbox" name="agree" checked required> 개인정보 수집·이용에 동의합니다. (본인인증 결과, 연락처, 정산 계좌, 행사 정보)</label><button class="btn block mt">${I('shield')}본인인증 (모의)</button></form>`, true);
-  const evs = S.events.filter(e => e.host === u.id).sort((a, b) => b.id - a.id), all = evs.map(totals);
-  return page('혼주·상주', navs.host('list'), `<div class="side between"><div><div class="eyebrow">My Events</div><h1>${esc(u.name)} 님의 행사</h1></div><a class="btn" href="#/host/new">${I('plus')}행사 등록</a></div>
-${u.bank_ok ? '' : `<div class="flash warn">${I('alert')}<div>정산 계좌가 등록되지 않았습니다. <a href="#/host/bank">본인 명의 계좌 인증하기</a></div></div>`}
-<div class="grid g3" style="margin:18px 0">${kpi('calendar', '등록 행사', evs.length + '건')}${kpi('heart', '받은 마음', all.reduce((s, t) => s + t.count, 0) + '건')}${kpi('wallet', '누적 수납액', won(all.reduce((s, t) => s + t.gross, 0)))}</div>
-${u.bank_ok ? `<div class="card tint side">${ibox('bank', '', true)}<div style="flex:1"><b>${u.bank_name} ${maskAcc(u.bank_account)}</b><div class="xs muted">본인 명의 확인 완료 · ${ymd(u.bank_ok)}</div></div>${pill('인증 완료', 'ok')}</div>` : ''}
-${evs.map(e => { const t = totals(e); return `<a class="card side" href="#/host/e/${e.id}" style="display:flex;text-decoration:none;color:inherit">${ibox(KIND_IC[e.kind], e.kind === 'funeral' ? '' : 'dark')}
-<div style="flex:1;min-width:200px"><b style="color:var(--ink);font-size:16px">${esc(e.title)}</b><div class="small muted">${kdate(e.date)} · ${esc(venue(e.venue).name)}</div></div>
-<div class="num"><b style="color:var(--ink);font-size:17px">${won(t.gross)}</b><div class="xs muted">${t.count}건</div></div><div class="side">${pill(EV_ST[e.status], EV_TONE[e.status])}${pill(SET_ST[e.settle], SET_TONE[e.settle])}</div>${I('arrow', 'sm')}</a>`; }).join('') || `<div class="card muted">등록된 행사가 없습니다.</div>`}`);
-});
 route(/^\/host\/bank$/, () => {
   const u = me(); if (!u) return go('#/host');
   const p = S.session.bank;
@@ -234,46 +192,6 @@ route(/^\/host\/bank$/, () => {
 <label>계좌번호</label><input name="acc" required value="${esc(u.bank_account || '')}" inputmode="numeric"><label>예금주</label><input name="holder" required value="${esc(u.name)}">
 <button class="btn block mt">${I('send')}1원 송금 요청 (모의)</button></form>
 ${p ? `<form class="card" data-form="bank-verify"><div class="card-h">${ibox('check-circle', 'pos')}<h3>입금자명 확인</h3></div><p class="small muted">입금자명에 표시된 숫자 4자리를 입력해 주세요.</p><input name="code" required maxlength="4" inputmode="numeric" class="amount-in" style="text-align:center;letter-spacing:.4em"><button class="btn block mt">확인</button></form>` : ''}`, true);
-});
-route(/^\/host\/new$/, () => {
-  if (!me()) return go('#/host');
-  return page('혼주·상주', navs.host('new'), `${stepper(['행사 정보', '식장 확인 요청', '식장 확인', '청첩장 공개'], 0)}
-<form class="card mt" data-form="new-event"><div class="card-h">${ibox('calendar', 'dark')}<h2>행사 등록</h2></div>
-<label>행사 구분</label><select name="kind"><option value="wedding">결혼식</option><option value="funeral">장례식</option><option value="other">기타 경조사 (돌잔치·칠순 등)</option></select>
-<label>행사명</label><input name="title" required placeholder="예: 김지은 ♥ 최도윤 결혼합니다"><div class="row2"><div><label>신청인 구분</label><input name="role" required placeholder="신부 · 혼주 · 상주"></div><div><label>시작 시각</label><input name="time" type="time" value="12:00"></div></div>
-<label>행사일</label><input type="date" name="date" required min="${ymd(today())}"><label>제휴 식장</label><select name="venue">${S.venues.map(v => `<option value="${v.id}">${esc(v.name)} · ${v.kind === 'wedding' ? '예식' : '장례'} · ${v.area}</option>`).join('')}</select>
-<label>홀·빈소</label><input name="hall" placeholder="예: 3층 그랜드홀"><label>안내 문구</label><textarea name="message"></textarea>
-<label>식장 계약서 <span class="muted" style="font-weight:400">(결혼식 필수 · JPG, PNG, PDF)</span></label><input type="file" name="contract" accept=".jpg,.jpeg,.png,.pdf">
-<label class="check" style="margin-top:14px"><input type="checkbox" name="meal" checked> 결제 하객에게 모바일 식권(QR) 발급</label>
-<div class="policy"><div>${I('shield')}<b>식장 확인</b>예약 확인 후 공개</div><div>${I('flower')}<b>장례</b>이용 확인으로 대체</div><div>${I('calendar')}<b>개설 한도</b>연 ${set('limit_host_events_per_year')}회</div></div>
-<button class="btn block mt">${I('send')}등록 및 식장 확인 요청</button></form>`, true);
-});
-route(/^\/host\/e\/(\d+)$/, ([id]) => {
-  const u = me(), e = ev(id); if (!u || !e || e.host !== u.id) return go('#/host');
-  const t = totals(e), on = settleOn(e), base = location.href.split('#')[0], st = S.settlements.find(s => s.event_id === e.id);
-  const rets = S.inquiries.filter(q => q.event_id === e.id && q.kind === 'return_request'), gs = gifts(e).slice().sort((a, b) => b.at - a.at);
-  const rel = {}; gs.filter(g => g.status !== 'cancelled').forEach(g => rel[g.rel || '기타'] = (rel[g.rel || '기타'] || 0) + g.amount);
-  const stage = ['pending_verify', 'rejected'].includes(e.status) ? 1 : e.status === 'cancelled' ? 2 : e.settle === 'settled' ? 5 : ['requested', 'held'].includes(e.settle) ? 4 : today() >= new Date(e.date) ? 3 : 2;
-  return page('혼주·상주', navs.host('list'), `<div class="side between"><div class="side">${ibox(KIND_IC[e.kind], 'dark')}<div><div class="eyebrow">${KIND[e.kind]} · ${e.code}</div><h1 class="mb0">${esc(e.title)}</h1><div class="small muted">${kdate(e.date)} ${e.time} · ${esc(venue(e.venue).name)} ${esc(e.hall)}</div></div></div>
-<div class="side">${pill(EV_ST[e.status], EV_TONE[e.status])}${pill(SET_ST[e.settle], SET_TONE[e.settle])}</div></div>
-<div class="card mt">${stepper(['행사 등록', '식장 확인', '행사 진행', '정산 신청', '정산 완료'], stage, e.status === 'rejected' ? 1 : e.status === 'cancelled' ? 2 : -1)}</div>
-${e.status === 'pending_verify' ? `<div class="flash warn">${I('clock')}<div>제휴 식장에 예약 여부를 확인하고 있습니다. 확인이 완료되면 문자로 안내드리며 청첩장이 공개됩니다.</div></div>` : ''}
-${e.status === 'rejected' ? `<div class="flash err">${I('x-circle')}<div>식장 확인 결과 반려되었습니다 — ${esc(e.note)}</div></div>` : ''}
-${e.status === 'published' ? `<div class="card tint side">${ibox('send', '', true)}<div style="flex:1;min-width:0"><b>공유 주소</b><div class="small" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><a href="#/i/${e.code}">${esc(base)}#/i/${e.code}</a></div></div><a class="btn sm ghost" href="#/i/${e.code}">${I('eye', 'sm')}미리보기</a></div>` : ''}
-<div class="grid g4">${kpi('heart', '받은 마음', t.count + '건', t.cancelled ? `취소 ${t.cancelled}건` : '')}${kpi('wallet', '수납 총액', won(t.gross), `평균 ${won(t.avg)}`)}${kpi('receipt', `수수료 (${(set('fee_rate_bp') / 100).toFixed(1)}%)`, won(Math.floor(t.gross * set('fee_rate_bp') / 10000)), '혼주 부담')}${kpi('bank', '예상 정산액', won(t.gross - Math.floor(t.gross * set('fee_rate_bp') / 10000)), '본인 명의 계좌')}</div>
-<div class="grid g2 mt"><div class="card"><div class="card-h">${ibox('clock', '', true)}<h3>정산 일정</h3><span class="sp">${pill(SET_ST[e.settle], SET_TONE[e.settle])}</span></div>${settleTimeline(e)}
-${e.settle === 'settled' ? `<div class="flash mb0">${I('check-circle')}<div>정산금 <b>${won(st.net)}</b>이 ${st.bank} ${st.acc} 계좌로 지급되었습니다. (${ymd(st.at)})</div></div>`
-      : e.settle === 'held' ? `<div class="flash warn mb0">${I('pause')}<div>정산 보류 — ${esc(e.hold)}<br><span class="xs">담당자 검토가 완료되면 정산 대기로 전환됩니다.</span></div></div>`
-        : e.settle === 'requested' ? `<div class="flash info mb0">${I('clock')}<div>정산 대기 중입니다. 운영 확인 후 본인 명의 계좌로 지급됩니다.</div></div>`
-          : `<div class="side between"><span class="small muted">${today() < on ? `정산 신청 가능일까지 <b>${daysBetween(today(), on)}일</b> 남았습니다.` : '지금 정산을 신청하실 수 있습니다.'}</span><button class="btn" data-act="settle" data-id="${e.id}" ${today() < on || e.status !== 'published' ? 'disabled' : ''}>${I('wallet')}정산 신청</button></div>`}</div>
-<div class="card"><div class="card-h">${ibox('qr', '', true)}<h3>식권 사용률 · 관계별 수납</h3></div><div class="side" style="gap:22px">${donut(t.pct, '사용률')}<div style="flex:1">${bars(Object.entries(rel).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, v]) => [k, v, man(v)]))}<div class="xs muted">관계별 수납액 상위 4</div></div></div></div></div>
-<div class="card"><div class="card-h">${ibox('heart', '', true)}<h3>받은 마음</h3><span class="sp small muted">${t.count}건 · 하객 연락처와 카드 정보는 표시되지 않습니다</span></div>
-<div class="tbl"><table><thead><tr><th>보내신 분</th><th class="num">금액</th><th>메시지</th><th>일시</th><th>상태</th><th>식권</th></tr></thead><tbody>
-${gs.map(g => `<tr><td><div class="who">${avatar(g.name)}<div><b>${esc(g.name)}</b><span>${esc(g.corp || g.rel)}</span></div></div></td><td class="num"><b>${won(g.amount)}</b>${g.inst ? `<div class="xs muted">${g.inst}개월</div>` : ''}</td><td class="small" style="max-width:240px">${esc(g.msg)}</td><td class="xs muted">${md(g.at)} ${hm(g.at)}</td><td>${pill(G_ST[g.status], G_TONE[g.status])}</td><td>${g.used ? I('check-circle', 'sm') : ''}</td></tr>`).join('') || `<tr><td colspan="6" class="muted">아직 결제 내역이 없습니다.</td></tr>`}</tbody></table></div></div>
-${rets.length ? `<div class="card"><div class="card-h">${ibox('send', 'warn', true)}<h3>반환 요청</h3></div>${rets.map(q => { const g = gift(q.gift_id); return `<div class="side" style="border-top:1px solid var(--line2);padding:12px 0"><div class="who" style="flex:1">${avatar(q.name)}<div><b>${esc(q.name)} · ${won(g.amount)}</b><span>${esc(q.body)}</span></div></div>
-${q.status === 'host_pending' ? `<button class="btn sm" data-act="return-yes" data-id="${q.id}">${I('check', 'sm')}반환 동의</button><button class="btn sm ghost" data-act="return-no" data-id="${q.id}">동의하지 않음</button>` : pill(q.status === 'resolved' ? '반환 완료' : '미동의', q.status === 'resolved' ? 'ok' : '')}</div>`; }).join('')}</div>` : ''}
-<div class="grid g2"><form class="card" data-form="thanks" data-id="${e.id}"><div class="card-h">${ibox('message', '', true)}<h3>감사 메시지 발송</h3></div><textarea name="body" required>보내주신 따뜻한 마음 감사히 받았습니다. 늘 건강하시고 행복하시길 바랍니다.</textarea><button class="btn ghost mt">${I('send')}미발송 하객 ${gs.filter(g => ['paid', 'settled'].includes(g.status) && !g.thanks).length}명에게 발송</button></form>
-${['published', 'pending_verify'].includes(e.status) && e.settle !== 'settled' ? `<form class="card" data-form="cancel-event" data-id="${e.id}" data-actor="host"><div class="card-h">${ibox('x-circle', 'err', true)}<h3>행사 취소·연기</h3></div><p class="small muted">행사를 취소하시면 정산 전 결제가 전액 자동 취소되며, 하객에게 문자로 안내됩니다.</p><input name="reason" required placeholder="취소 사유"><button class="btn danger mt">행사 취소</button></form>` : ''}</div>`);
 });
 
 /* ── 제휴 식장 ────────────────────────────────────────────── */
@@ -317,7 +235,7 @@ ${kpi('inbox', '민원 처리', `${done.length}/${inq.length}건`, `미처리 ${
 <div class="grid g2 mt"><div class="card"><div class="card-h">${ibox('alert', 'err', true)}<h3>검토가 필요한 경보</h3><a class="sp small" href="#/admin/alerts">전체 보기</a></div>${oa.map(a => `<a class="who" href="#/admin/e/${a.event_id}" style="padding:10px 0;border-top:1px solid var(--line2);text-decoration:none">${ibox(a.sev === 'high' ? 'alert' : 'shield', a.sev === 'high' ? 'err' : 'warn', true)}<div><b>${RULES[a.rule]}</b><span>${esc(ev(a.event_id).title)} · ${esc(a.detail)}</span></div></a>`).join('') || '<p class="muted small">검토 대기 중인 경보가 없습니다.</p>'}</div>
 <div class="card"><div class="card-h">${ibox('building', 'warn', true)}<h3>식장 확인 대기</h3></div>${S.events.filter(e => e.status === 'pending_verify').map(e => `<a class="who" href="#/admin/e/${e.id}" style="padding:10px 0;border-top:1px solid var(--line2);text-decoration:none">${ibox(KIND_IC[e.kind], '', true)}<div><b>${esc(e.title)}</b><span>${esc(venue(e.venue).name)} · ${kdate(e.date)}</span></div></a>`).join('') || '<p class="muted small">대기 중인 행사가 없습니다.</p>'}</div></div>`);
 });
-route(/^\/admin\/events(?:\?s=(\w+))?$/, ([s]) => {
+route(/^\/admin\/events$/, (_, P) => { const s = P.get('s') || '';
   const F = { '': '전체', pending_verify: '식장 확인 대기', published: '공개', requested: '정산 대기', held: '정산 보류', settled: '정산 완료', rejected: '반려', cancelled: '취소' };
   const list = S.events.filter(e => !s || e.status === s || e.settle === s).sort((a, b) => b.date.localeCompare(a.date));
   return adminPage('/events', `<div class="eyebrow">Events</div><h1>행사 관리</h1><div class="side" style="margin:12px 0 18px">${Object.entries(F).map(([k, l]) => `<a class="btn sm ${(s || '') === k ? '' : 'ghost'}" href="#/admin/events${k ? '?s=' + k : ''}">${l}</a>`).join('')}</div>
@@ -432,16 +350,14 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('change', e => { const t = e.target.closest('[data-toggle]'); if (t) document.getElementById(t.dataset.toggle).style.display = t.checked ? 'block' : 'none'; });
 function render() {
-  const path = location.hash.replace(/^#/, '') || '/';
+  const full = location.hash.replace(/^#/, '') || '/', [path, qs] = full.split('?'), params = new URLSearchParams(qs || '');
   if (!path.startsWith('/admin/e/')) delete S.session.reveal;
   let html = null;
-  for (const [re, fn] of routes) { const m = path.match(re); if (m) { html = fn(m.slice(1)); break; } }
+  for (const [re, fn] of routes) { const m = path.match(re); if (m) { html = fn(m.slice(1), params); break; } }
   if (html === '') return;
   flashes = [];
   $('#app').innerHTML = html ?? page('경조금 간편 수납', navs.public(''), `<div class="card"><h2>페이지를 찾을 수 없습니다</h2><a href="#/">처음으로</a></div>`);
   const q = $('#qr'); if (q && window.qrcode) { const qr = qrcode(0, 'M'); qr.addData(q.dataset.qr); qr.make(); q.innerHTML = qr.createSvgTag({ cellSize: 5, margin: 0, scalable: true }); }
   window.scrollTo(0, 0);
 }
-load();
-window.addEventListener('hashchange', render);
-render();
+

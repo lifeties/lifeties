@@ -2,7 +2,7 @@
  * 서버 버전(app/services/core.py)과 같은 규칙을 자바스크립트로 옮긴 것입니다.
  * 결제·본인인증·계좌인증·문자는 모두 모의이며 데이터는 이 브라우저(localStorage)에만 저장됩니다. */
 'use strict';
-const KEY = 'lifeties-demo-v2';
+const KEY = 'lifeties-demo-v3';
 const DAY = 86400000;
 const $ = (s, el = document) => el.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -43,6 +43,14 @@ const DEFAULTS = {
   rule_high_amount_new_user: [300000, '개설 당일 고액 결제 경보 기준', '원', 'alert'], rule_min_checkin_ratio_pct: [20, '식권 사용률 하한', '%', 'qr'],
 };
 
+/* 답례품 카탈로그: 혼주가 고르고 하객이 선택, 비용은 정산 시 차감 */
+const FAVORS = {
+  coffee: { name: '아메리카노 모바일 교환권', price: 4500, ic: 'coffee', tone: '#6F4E37' },
+  cake: { name: '수제 화과자 6구 세트', price: 12000, ic: 'gift', tone: '#C2185B' },
+  towel: { name: '호텔식 수건 2매 세트', price: 9800, ic: 'sparkle', tone: '#3451E6' },
+  voucher: { name: '모바일 상품권 1만원', price: 10000, ic: 'credit-card', tone: '#0E9F6E' },
+};
+const SIDE = { groom: '신랑측', bride: '신부측' };
 let S;
 const save = () => localStorage.setItem(KEY, JSON.stringify(S));
 const set = k => S.settings[k];
@@ -104,7 +112,7 @@ function pay(e, f) {
   if (digits(f.exp).length !== 4) throw new RuleError('유효기간을 MM/YY 형식으로 입력해 주세요.');
   const g = { id: nextId('g'), event_id: e.id, name: f.name.trim(), phone: digits(f.phone), rel: f.rel, msg: (f.msg || '').slice(0, 300), amount, inst,
     brand: { 4: 'VISA', 5: 'Mastercard', 9: '국내전용' }[card[0]] || '국내카드', last4: card.slice(-4), payer, device: f.device, tid: 'T' + code(12),
-    ticket: e.meal ? code(10) : null, used: null, status: 'paid', at: Date.now(), corp: f.corp ? (f.corp_name || '').trim() : '' };
+    ticket: e.meal ? code(10) : null, used: null, status: 'paid', at: Date.now(), corp: f.corp ? (f.corp_name || '').trim() : '', side: f.side || '', favor: (e.favors || []).includes(f.favor) ? f.favor : '' };
   S.gifts.push(g); rulesForGift(e, g);
   sms(g.phone, `[LifeTies] ${e.title} ${GIFT_WORD[e.kind]} ${won(amount)} 결제가 완료되었습니다. 정산 전까지 영수증 화면에서 취소하실 수 있습니다.`);
   audit('guest', 'gift.paid', 'gift:' + g.id, `event=${e.code} amount=${amount}`); save(); return g;
@@ -121,6 +129,7 @@ function cancelEvent(e, actor, why, at = Date.now()) {
   let n = 0; gifts(e).forEach(g => { if (g.status === 'paid') { cancelGift(g, actor, '행사 취소: ' + why, at); n++; } });
   e.status = 'cancelled'; e.cancelled = at; audit(actor, 'event.cancelled', 'event:' + e.code, `${why} · 자동 취소 ${n}건`, at); save(); return n;
 }
+const favorCost = gs => gs.reduce((s, g) => s + (g.favor ? FAVORS[g.favor].price : 0), 0);
 function requestSettle(e) {
   const u = user(e.host);
   if (e.status !== 'published') throw new RuleError('공개된 행사만 정산을 신청하실 수 있습니다.');
@@ -132,8 +141,8 @@ function requestSettle(e) {
 }
 function executeSettle(e, at = Date.now()) {
   if (e.settle !== 'requested' || openAlerts(e).length) throw new RuleError('정산 대기 상태가 아니거나 검토 중인 경보가 있어 지급할 수 없습니다.');
-  const u = user(e.host), gs = gifts(e).filter(g => g.status === 'paid'), gross = gs.reduce((s, g) => s + g.amount, 0), fee = Math.floor(gross * set('fee_rate_bp') / 10000);
-  const st = { event_id: e.id, gross, fee, net: gross - fee, count: gs.length, bank: u.bank_name, acc: maskAcc(u.bank_account), payout: 'P' + code(12), at };
+  const u = user(e.host), gs = gifts(e).filter(g => g.status === 'paid'), gross = gs.reduce((s, g) => s + g.amount, 0), fee = Math.floor(gross * set('fee_rate_bp') / 10000), favor = favorCost(gs);
+  const st = { event_id: e.id, gross, fee, favor, net: gross - fee - favor, count: gs.length, bank: u.bank_name, acc: maskAcc(u.bank_account), payout: 'P' + code(12), at };
   S.settlements.push(st); gs.forEach(g => g.status = 'settled'); e.settle = 'settled';
   sms(u.phone, `[LifeTies] ${e.title} 정산금 ${won(st.net)}이 ${u.bank_name} ${maskAcc(u.bank_account)} 계좌로 입금되었습니다.`, at);
   audit('admin', 'settlement.paid', 'event:' + e.code, `총액 ${won(gross)} · 수수료 ${won(fee)} · 지급 ${won(st.net)}`, at); save(); return st;
@@ -201,6 +210,18 @@ function seed() {
   E({ code: 'REJECT01', host: taeho.id, venue: 3, kind: 'wedding', title: '서태호 결혼식', role: '신랑', d: 30, c: -9, status: 'rejected', note: '식장 확인 결과 해당 일자 예약 내역 없음 · 계약서 정보 불일치', contract: '계약서_스캔.jpg' });
   const ev12 = E({ code: 'CANCEL01', host: gayoung.id, venue: 1, kind: 'wedding', title: '배가영 ♥ 류민혁 결혼식', role: '신부', d: 9, c: -18, hall: '3층 그랜드홀', note: '식장 유선 확인 · 예약번호 GH-2340', contract: '그랜드하모니_배가영.pdf' });
 
+  // 행사 상세(청첩장·부고장 화면용)
+  const W = (e, groom, bride, gf, gm, bf, bm, favors) => Object.assign(e, { groom, bride, parents: { gf, gm, bf, bm }, favors, photos: 3 });
+  W(ev1, '최도윤', '김지은', '최영호', '박미경', '김상철', '이은정', ['coffee', 'cake', 'voucher']);
+  W(ev3, '이선호', '한소라', '이만수', '정혜숙', '한기철', '오명희', ['coffee']);
+  W(ev4, '이준서', '정다인', '이정훈', '최유진', '정민호', '강수연', ['cake', 'towel']);
+  W(ev5, '한도윤', '김나래', '한상욱', '윤미란', '김동석', '서경아', []);
+  W(ev7, '오지훈', '정하늘', '오성택', '임정순', '정기현', '문혜영', ['coffee', 'towel', 'voucher']);
+  W(ev12, '류민혁', '배가영', '류재근', '홍성미', '배인수', '조미숙', ['coffee']);
+  S.events.filter(e => ['PENDING2', 'REJECT01'].includes(e.code)).forEach(e => W(e, e.code === 'PENDING2' ? '윤재원' : '서태호', e.code === 'PENDING2' ? '송하은' : '최수빈', '윤석진', '김경자', '송재훈', '박선희', ['coffee']));
+  Object.assign(ev2, { deceased: { name: '박정자', age: 84, died: ymd(addDays(T, -1)), religion: '불교' }, mourners: [['장남', '박민수'], ['차남', '박민호'], ['장녀', '박수진'], ['자부', '정은희'], ['사위', '김태원']], balin: ymd(addDays(T, 2)) + ' 07:00', burial: '경기 파주시 용미리 추모공원', favors: [] });
+  Object.assign(ev6, { deceased: { name: '문영길', age: 79, died: ymd(addDays(T, -14)), religion: '기독교' }, mourners: [['장녀', '문서연'], ['장남', '문준혁'], ['사위', '배상우']], balin: ymd(addDays(T, -12)) + ' 08:00', burial: '경기 고양시 벽제 승화원', favors: ['coffee'] });
+  Object.assign(ev8, { favors: ['cake'] });
   const FN = '김이박최정강조윤장임한오서신권황안송류홍'.split(''), GN = ['민준', '서연', '도현', '지우', '하준', '서윤', '예준', '지민', '시우', '수아', '주원', '하은', '지호', '윤서', '건우', '채원', '현우', '지유', '우진', '다은', '승현', '소율', '정훈', '미경', '영수', '은정', '상철', '혜진', '성민', '경희'];
   const REL = { wedding: ['대학 동기', '회사 동료', '친척', '고등학교 친구', '동호회', '거래처', '이웃', '교회 지인'], funeral: ['회사 동료', '친척', '고인 지인', '대학 동기', '거래처', '이웃'], other: ['친척', '이웃', '교회 지인', '자녀 친구', '동창'] };
   const MSG = { wedding: ['결혼 진심으로 축하해!', '행복하게 잘 살아~', '두 분의 앞날에 축복이 가득하길 바랍니다.', '축하드립니다. 늘 행복하세요.', ''], funeral: ['삼가 고인의 명복을 빕니다.', '깊은 위로를 전합니다.', '마음으로 함께하겠습니다.', ''], other: ['만수무강하세요!', '칠순 진심으로 축하드립니다.', ''] };
@@ -210,7 +231,8 @@ function seed() {
     const name = o.name || pick(FN) + pick(GN), phone = o.phone || '010' + String(Math.floor(rnd() * 1e8)).padStart(8, '0'), corp = o.corp ?? (rnd() < .07 ? pick(CORP) : '');
     const g = { id: nextId('g'), event_id: e.id, name, phone, rel: o.rel || (corp ? '거래처' : pick(REL[e.kind])), msg: o.msg ?? pick(MSG[e.kind]), amount: o.amount || (corp ? 200000 : pick(AMT[e.kind])),
       inst: o.inst ?? (rnd() < .08 ? pick([2, 3]) : 0), brand: pick(['국내카드', '국내카드', 'VISA', 'Mastercard']), last4: phone.slice(-4), payer: o.payer || ci(name, '19800101', phone),
-      device: o.device || 'D' + code(8), tid: 'T' + code(12), ticket: e.meal ? code(10) : null, used: null, status: 'paid', at, corp };
+      device: o.device || 'D' + code(8), tid: 'T' + code(12), ticket: e.meal ? code(10) : null, used: null, status: 'paid', at, corp,
+      side: e.kind === 'wedding' ? (rnd() < .5 ? 'groom' : 'bride') : '', favor: (e.favors || []).length && rnd() < .65 ? pick(e.favors) : '' };
     S.gifts.push(g); audit('guest', 'gift.paid', 'gift:' + g.id, `event=${e.code} amount=${g.amount}`, at);
     if (g.amount >= 100000 || rnd() < .3) sms(g.phone, `[LifeTies] ${e.title} ${GIFT_WORD[e.kind]} ${won(g.amount)} 결제가 완료되었습니다.`, at);
     return g;
