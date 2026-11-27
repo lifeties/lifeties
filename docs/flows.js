@@ -142,7 +142,7 @@ function favorPicker(d) {
 const smsText = e => e.kind === 'funeral'
   ? `[부고] 故 ${e.deceased?.name || e.title.replace(/故|님 부고/g, '').trim()} 님께서 ${e.deceased ? md(e.deceased.died) : ''} 별세하셨기에 삼가 알려드립니다.\n빈소: ${venue(e.venue).name} ${e.hall}\n발인: ${e.balin ? md(e.balin) + ' ' + e.balin.slice(11) : '-'}\n▶ 부고 보기`
   : `[${e.kind === 'wedding' ? '청첩장' : '초대장'}] ${e.title}\n${kdate(e.date)} ${e.time}\n${venue(e.venue).name} ${e.hall}\n▶ ${e.kind === 'wedding' ? '모바일 청첩장' : '초대장'} 보기`;
-const shareUrl = e => location.href.split('#')[0] + '#/i/' + e.code;
+const shareUrl = e => (/^(localhost|127\.)/.test(location.hostname) ? 'https://lifeties.github.io/lifeties/' : location.href.split('#')[0]) + '#/i/' + e.code;
 route(/^\/host\/e\/(\d+)\/send$/, ([id]) => {
   const u = host(), e = ev(id); if (!u || !e || e.host !== u.id) return go('#/host');
   const ok = e.status === 'published', word = e.kind === 'funeral' ? '부고장' : e.kind === 'wedding' ? '청첩장' : '초대장';

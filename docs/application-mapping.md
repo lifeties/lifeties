@@ -33,3 +33,25 @@
 | 개선 사항 | 행사 전 조기 인출 삭제 | `FEATURE_EARLY_WITHDRAWAL = False` |
 
 `[ ]` 안 숫자는 예시값이며 `/admin/settings`에서 바꿀 수 있습니다.
+
+## 신청서 [별지1] 화면 예시 ↔ 데모 화면 (2026-11-27 2차)
+
+신청서의 화면 예시(스토리보드) 25장을 데모 화면 기준으로 다시 만들어 `docs/storyboards/`에 두었고, 신청서에는 기존 이미지 옆에 새 이미지를 **제안 모드**로 넣었습니다. 아래 주소는 GitHub Pages 데모(`https://lifeties.github.io/lifeties/`) 기준입니다.
+
+| 화면 예시 | 새 이미지 | 데모 주소 |
+|---|---|---|
+| 홈화면 – 설정화면 | `s19.jpg` | `#/host` → `#/host/settings` |
+| 홈화면 › 청첩장·부고장 만들기 | `s15.jpg`, `s07.jpg` | `#/host` → `#/host/new/wedding`, `#/host/new/funeral` |
+| 청첩장 만들기 Step 01–06 | `s14.jpg`, `s13.jpg`, `s02.jpg` | `#/host/new/wedding?step=1…6` |
+| 부고장 만들기 Step 01–04 | `s06.jpg`, `s24.jpg` | `#/host/new/funeral?step=1…4` |
+| 청첩장·부고장 발송 | `s22.jpg`, `s21.jpg` | `#/host/e/{id}/send` |
+| 청첩장·부고장 수신 | `s23.jpg`, `s29.jpg` | `#/m/{행사코드}` (문자 수신 화면) |
+| 홈 → 만들기 → 발송 → 수신 | `s12.jpg`, `s08.jpg` | 위 화면 연결 |
+| 청첩장 안내 / 부고장 안내 | `s03.jpg`, `s10.jpg` | `#/i/WEDDING1`, `#/i/FUNERAL1` |
+| 축의금·조의금 보내기(본인 확인) | `s27.jpg`, `s20.jpg` | `#/i/{코드}/pay?step=1…3` |
+| 축의금·조의금 보내기 → 결제 → 완료 | `s01.jpg`, `s04.jpg`, `s16.jpg`, `s25.jpg` | `#/i/{코드}/pay?step=…` → `?step=pg` → `#/g/{id}` |
+| 청첩장 메뉴 / 부고장 메뉴 | `s28.jpg`, `s05.jpg` | `#/host/e/{id}` (개요·내역·정산·답례품·발송 탭) |
+| 내역 확인 → 정산 신청 및 조회 | `s18.jpg` | `#/host/e/{id}/gifts`, `#/host/e/{id}/settle` |
+| 통계 그림(출생·사망·혼인) | `stats_2021_2025.jpg` | — (국가데이터처 확정치 2021~2025) |
+
+원본 예시와 달라진 점: 가상계좌 입금과 행사 전 인출 흐름은 1차 변경(본인 명의 계좌 정산, 행사일 + 3일 정산)에 맞췄고, 답례품 비용은 정산 시 차감되도록 했습니다.

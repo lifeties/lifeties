@@ -306,3 +306,4 @@ body{overflow-x:hidden}
 .kpi .v{word-break:keep-all}
 @media(max-width:560px){.kpi{padding:14px;gap:10px}.kpi .v{font-size:17px}.kpi .ibox{width:34px;height:34px;border-radius:10px}.kpi .ibox .ic{width:17px;height:17px}
   .grid.g4{grid-template-columns:1fr 1fr;gap:10px}.tabs a{padding:10px 10px;font-size:13.5px}.ev-row .side{width:100%}}
+.row2>div{min-width:0}input,select{min-width:0}
