@@ -21,7 +21,7 @@
  <label>금액</label>
  <input name="amount" id="amount" type="number" min="10000" step="1000" max="{{ s.limit_per_gift }}" required placeholder="예: 100000">
  <div class="amounts">{% for a in [50000,100000,200000,300000] %}<button type="button" onclick="document.getElementById('amount').value={{ a }}">{{ (a//10000) }}만원</button>{% endfor %}</div>
- <p class="small muted">1건 최대 {{ s.limit_per_gift|won }} · 하객 1인 월 {{ s.limit_guest_monthly|won }}</p>
+ <p class="small muted">1회 최대 {{ s.limit_per_gift|won }} · 하객 1인 월 {{ s.limit_guest_monthly|won }}</p>
  <div class="row"><div><label>보내는 분</label><input name="guest_name" required></div><div><label>관계</label><input name="relation" placeholder="예: 대학 동기"></div></div>
  <div class="row"><div><label>생년월일(8자리)</label><input name="guest_birth" required pattern="\d{8}" placeholder="19900101"></div><div><label>휴대폰</label><input name="guest_phone" required placeholder="010-0000-0000"></div></div>
  <label>전하는 말(선택)</label><textarea name="message" maxlength="300"></textarea>

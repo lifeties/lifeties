@@ -15,7 +15,7 @@ from .settings import get, load_all
 
 
 class RuleError(Exception):
-    """결제·정산이 규칙에 막혔을 때. 메시지는 사용자에게 그대로 보여줍니다."""
+    """결제·정산이 업무 규칙에 따라 제한될 때. 메시지는 사용자에게 그대로 보여줍니다."""
 
 
 # ── 공통 ────────────────────────────────────────────────────────────────
@@ -61,7 +61,7 @@ def can_open_event(db: Session, user: User) -> None:
     n = db.scalar(select(func.count()).select_from(Event).where(
         Event.host_id == user.id, Event.created_at >= since, Event.status != "cancelled"))
     if n >= limit:
-        raise RuleError(f"행사 개설은 1년에 {limit}회까지 가능합니다.")
+        raise RuleError(f"행사 개설은 연 {limit}회로 제한됩니다.")
 
 
 def settle_available_on(db: Session, ev: Event) -> date:
@@ -90,29 +90,29 @@ def check_limits(db: Session, ev: Event, amount: int, installment: int, payer_ci
     s = load_all(db)
     reason = None
     if ev.status != "published":
-        reason = "공개된 행사가 아닙니다(식장 확인 전이거나 취소된 행사)."
+        reason = "식장 확인이 완료된 행사에서만 결제하실 수 있습니다."
     elif date.today() > ev.event_date + timedelta(days=s["gift_window_days_after"]):
-        reason = "결제 가능 기간이 지났습니다."
+        reason = "결제 가능 기간이 종료되었습니다."
     elif amount < 10_000 or amount % 1_000:
-        reason = "금액은 1만 원 이상, 1천 원 단위로 입력해 주세요."
+        reason = "결제 금액은 1만 원 이상, 1천 원 단위로 입력해 주세요."
     elif amount > s["limit_per_gift"]:
-        reason = f"1건 결제 한도({won(s['limit_per_gift'])})를 넘었습니다."
+        reason = f"1회 결제 한도({won(s['limit_per_gift'])})를 초과하여 결제가 제한됩니다."
     elif installment not in (0, 2, 3):
-        reason = "할부는 최대 3개월까지 가능합니다."
+        reason = "할부는 최대 3개월까지 이용하실 수 있습니다."
     elif payer_ci == ev.host.ci:
-        reason = "본인 행사에는 본인 카드로 결제할 수 없습니다."
+        reason = "본인이 개설한 행사에는 본인 명의 카드로 결제하실 수 없습니다."
     if not reason:
         ev_total = db.scalar(select(func.coalesce(func.sum(Gift.amount), 0)).where(
             Gift.event_id == ev.id, Gift.status != "cancelled"))
         if ev_total + amount > s["limit_per_event"]:
-            reason = f"행사당 총액 한도({won(s['limit_per_event'])})를 넘었습니다."
+            reason = f"행사별 수납 한도({won(s['limit_per_event'])})를 초과하여 결제가 제한됩니다."
     if not reason:
         month_start = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         mtotal = db.scalar(select(func.coalesce(func.sum(Gift.amount), 0)).where(
             Gift.card_owner_ci == payer_ci, Gift.status != "cancelled",
             Gift.created_at >= month_start))
         if mtotal + amount > s["limit_guest_monthly"]:
-            reason = f"하객 1인 월 누적 한도({won(s['limit_guest_monthly'])})를 넘었습니다."
+            reason = f"하객 1인 월 결제 한도({won(s['limit_guest_monthly'])})를 초과하여 결제가 제한됩니다."
     if reason:
         db.add(BlockedAttempt(event_id=ev.id, reason=reason, amount=amount,
                               guest_phone=providers.phone_norm(guest_phone)))
@@ -151,9 +151,9 @@ def pay_gift(db: Session, ev: Event, *, guest_name: str, guest_phone: str, guest
 
 def cancel_gift(db: Session, g: Gift, actor: str, reason: str) -> None:
     if g.status != "paid":
-        raise RuleError("정산 전 결제만 취소할 수 있습니다. 정산 후에는 반환 요청을 이용해 주세요.")
+        raise RuleError("정산 전 결제만 취소하실 수 있습니다. 정산 후에는 반환 요청을 이용해 주세요.")
     if g.event.settlement_status == "settled":
-        raise RuleError("이미 정산된 행사입니다.")
+        raise RuleError("정산이 완료된 행사입니다.")
     providers.pg_cancel(g.pg_tid, g.amount)
     g.status = "cancelled"
     g.cancelled_at = datetime.now()
@@ -165,7 +165,7 @@ def cancel_gift(db: Session, g: Gift, actor: str, reason: str) -> None:
 def cancel_event(db: Session, ev: Event, actor: str, reason: str) -> int:
     """행사 취소: 정산 전 결제 전액 자동 취소 + 하객 문자 안내."""
     if ev.settlement_status == "settled":
-        raise RuleError("이미 정산된 행사는 취소할 수 없습니다. 고객센터로 문의해 주세요.")
+        raise RuleError("정산이 완료된 행사는 취소하실 수 없습니다. 고객센터로 문의해 주세요.")
     n = 0
     for g in ev.gifts:
         if g.status == "paid":
@@ -280,14 +280,14 @@ def review_alert(db: Session, a: RiskAlert, reviewer: str, decision: str, note: 
 def request_settlement(db: Session, ev: Event) -> str:
     host = ev.host
     if ev.status != "published":
-        raise RuleError("공개된 행사만 정산할 수 있습니다.")
+        raise RuleError("공개된 행사만 정산을 신청하실 수 있습니다.")
     if not host.bank_verified_at:
-        raise RuleError("정산 계좌(본인 명의) 인증을 먼저 완료해 주세요.")
+        raise RuleError("본인 명의 정산 계좌 인증을 먼저 완료해 주세요.")
     avail = settle_available_on(db, ev)
     if date.today() < avail:
-        raise RuleError(f"정산은 {avail:%Y-%m-%d}부터 신청할 수 있습니다(행사 전 인출 불가).")
+        raise RuleError(f"정산은 {avail:%Y-%m-%d}부터 신청하실 수 있습니다. (행사 전 인출 불가)")
     if ev.settlement_status == "settled":
-        raise RuleError("이미 정산되었습니다.")
+        raise RuleError("정산이 이미 완료되었습니다.")
     run_rules_for_event(db, ev)
     db.flush()
     db.refresh(ev)
@@ -308,7 +308,7 @@ def execute_settlement(db: Session, ev: Event, actor: str) -> Settlement:
     if ev.settlement_status != "requested":
         raise RuleError("정산 대기 상태가 아닙니다.")
     if open_alerts(ev):
-        raise RuleError("열린 경보가 있어 정산할 수 없습니다.")
+        raise RuleError("검토 중인 경보가 있어 지급할 수 없습니다.")
     host = ev.host
     gifts = [g for g in ev.gifts if g.status == "paid"]
     gross = sum(g.amount for g in gifts)
@@ -335,7 +335,7 @@ def execute_settlement(db: Session, ev: Event, actor: str) -> Settlement:
 
 def request_return(db: Session, g: Gift, body: str) -> Inquiry:
     if g.status != "settled":
-        raise RuleError("정산 전 결제는 반환 요청 없이 바로 취소할 수 있습니다.")
+        raise RuleError("정산 전 결제는 반환 요청 없이 즉시 취소하실 수 있습니다.")
     q = Inquiry(kind="return_request", event_id=g.event_id, gift_id=g.id, name=g.guest_name,
                 phone=g.guest_phone, body=body, status="host_pending")
     g.status = "return_requested"

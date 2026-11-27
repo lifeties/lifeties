@@ -52,7 +52,7 @@ def test_guest_payment_receipt_ticket_cancel():
 
 def test_limits_block():
     c = client()
-    for amount, msg in [(600000, "1건 결제 한도"), (5000, "1만 원 이상")]:
+    for amount, msg in [(600000, "1회 결제 한도"), (5000, "1만 원 이상")]:
         r = pay(c, "WEDDING1", amount)
         assert r.headers["location"].endswith("#gift")
         assert msg in c.get("/i/WEDDING1").text
@@ -60,7 +60,7 @@ def test_limits_block():
     assert "최대 3개월" in c.get("/i/WEDDING1").text
     # 혼주 본인 카드로 자기 행사 결제 차단
     r = pay(c, "WEDDING1", 100000, name="김지은", phone="010-1234-5678", guest_birth="19940312")
-    assert "본인 행사" in c.get("/i/WEDDING1").text
+    assert "본인이 개설한 행사" in c.get("/i/WEDDING1").text
     # 승인 거절 카드
     pay(c, "WEDDING1", 100000, card_number="4000000000000002")
     assert "승인 거절" in c.get("/i/WEDDING1").text
@@ -76,7 +76,7 @@ def test_monthly_guest_limit():
 
 
 def test_unverified_event_not_public():
-    assert "찾을 수 없습니다" in client().get("/i/PENDING1").text
+    assert "공개되지 않은 행사" in client().get("/i/PENDING1").text
 
 
 def test_host_flow_settlement_and_admin_pay():
@@ -172,7 +172,7 @@ def test_venue_checkin():
     v = client()
     v.post("/venue/login", data=dict(venue_id=2, staff_code="2222"))
     assert "확인:" in v.post("/venue/scan", data=dict(code=code)).text
-    assert "이미 사용한" in v.post("/venue/scan", data=dict(code=code)).text
+    assert "이미 사용된" in v.post("/venue/scan", data=dict(code=code)).text
 
 
 def test_admin_pages_and_pii_reveal_logged():

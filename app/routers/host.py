@@ -74,12 +74,12 @@ def bank_start(request: Request, db: Session = Depends(get_db), bank_name: str =
                bank_account: str = Form(...), bank_holder: str = Form(...)):
     u = current(request, db)
     if not providers.bank_holder_matches(bank_holder, u.name):
-        flash(request, "본인 명의 계좌만 등록할 수 있습니다(예금주와 본인인증 이름 불일치).", "err")
+        flash(request, "예금주가 본인인증 성명과 일치하지 않습니다. 본인 명의 계좌만 등록하실 수 있습니다.", "err")
         return redirect("/host/bank")
     code = providers.bank_send_one_won(bank_name, bank_account)
     request.session["bank_pending"] = {"bank_name": bank_name, "bank_account": bank_account,
                                        "bank_holder": bank_holder, "code": code}
-    flash(request, f"1원을 보냈습니다. 입금자명의 숫자 4자리를 입력해 주세요. (데모 코드: {code})")
+    flash(request, f"1원을 송금했습니다. 입금자명의 숫자 4자리를 입력해 주세요. (데모 인증번호 {code})")
     return redirect("/host/bank")
 
 
@@ -88,14 +88,14 @@ def bank_verify(request: Request, db: Session = Depends(get_db), code: str = For
     u = current(request, db)
     p = request.session.get("bank_pending")
     if not p or code.strip() != p["code"]:
-        flash(request, "인증 코드가 맞지 않습니다.", "err")
+        flash(request, "인증번호가 일치하지 않습니다.", "err")
         return redirect("/host/bank")
     u.bank_name, u.bank_account, u.bank_holder = p["bank_name"], p["bank_account"], p["bank_holder"]
     u.bank_verified_at = datetime.now()
     request.session.pop("bank_pending")
     core.audit(db, f"host:{u.id}", "bank.verified", "", core.mask_account(u.bank_account))
     db.commit()
-    flash(request, "정산 계좌 인증을 마쳤습니다.")
+    flash(request, "정산 계좌 인증이 완료되었습니다.")
     return redirect("/host")
 
 
@@ -127,7 +127,7 @@ async def new_event(request: Request, db: Session = Depends(get_db), kind: str =
         data = await contract.read()
         ext = ALLOWED_UPLOAD_TYPES.get(contract.content_type or "")
         if not ext or len(data) > MAX_UPLOAD_BYTES:
-            flash(request, "계약서는 10MB 이하 JPG·PNG·PDF만 올릴 수 있습니다.", "err")
+            flash(request, "계약서는 10MB 이하의 JPG, PNG, PDF 파일만 첨부하실 수 있습니다.", "err")
             return redirect("/host/events/new")
         fname = f"contract_{core.new_code(12)}{ext}"
         (UPLOAD_DIR / fname).write_bytes(data)
@@ -141,7 +141,7 @@ async def new_event(request: Request, db: Session = Depends(get_db), kind: str =
     db.add(ev)
     core.audit(db, f"host:{u.id}", "event.created", f"event:{ev.code}", kind)
     db.commit()
-    flash(request, "행사를 등록했습니다. 식장 예약 확인이 끝나면 청첩장(부고)이 공개됩니다.")
+    flash(request, "행사가 등록되었습니다. 식장 예약 확인 후 청첩장이 공개됩니다.")
     return redirect(f"/host/events/{ev.id}")
 
 
@@ -169,8 +169,8 @@ def settle(eid: int, request: Request, db: Session = Depends(get_db)):
     ev = _own(request, db, eid)
     try:
         r = core.request_settlement(db, ev)
-        flash(request, "정산을 신청했습니다. 확인 후 본인 명의 계좌로 입금됩니다." if r == "requested"
-              else "이상거래 점검이 필요해 정산이 보류되었습니다. 담당자 검토 후 안내드립니다.",
+        flash(request, "정산 신청이 접수되었습니다. 운영 확인 후 본인 명의 계좌로 지급됩니다." if r == "requested"
+              else "이상거래 점검 대상으로 확인되어 정산이 보류되었습니다. 담당자 검토 후 안내드립니다.",
               "ok" if r == "requested" else "warn")
     except core.RuleError as e:
         flash(request, str(e), "err")
@@ -183,7 +183,7 @@ def cancel_event(eid: int, request: Request, db: Session = Depends(get_db),
     ev = _own(request, db, eid)
     try:
         n = core.cancel_event(db, ev, f"host:{ev.host_id}", reason)
-        flash(request, f"행사를 취소했습니다. 결제 {n}건을 자동 취소하고 하객에게 문자로 알렸습니다.")
+        flash(request, f"행사가 취소되었습니다. 결제 {n}건이 자동 취소되었으며 하객에게 안내 문자가 발송되었습니다.")
     except core.RuleError as e:
         flash(request, str(e), "err")
     return redirect(f"/host/events/{eid}")
@@ -200,7 +200,7 @@ def thanks(eid: int, request: Request, db: Session = Depends(get_db), body: str 
             n += 1
     core.audit(db, f"host:{ev.host_id}", "thanks.sent", f"event:{ev.code}", f"{n}건")
     db.commit()
-    flash(request, f"감사 문자를 {n}명에게 보냈습니다.")
+    flash(request, f"감사 메시지를 {n}명에게 발송했습니다.")
     return redirect(f"/host/events/{eid}")
 
 
@@ -212,5 +212,5 @@ def answer_return(qid: int, request: Request, db: Session = Depends(get_db),
     if not ev or q.status != "host_pending":
         return redirect("/host")
     core.answer_return(db, q, agree == "yes", f"host:{ev.host_id}")
-    flash(request, "반환 요청에 답했습니다.")
+    flash(request, "반환 요청을 처리가 완료되었습니다.")
     return redirect(f"/host/events/{ev.id}")

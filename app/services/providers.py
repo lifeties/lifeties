@@ -54,11 +54,11 @@ def pg_approve(card_number: str, expiry: str, owner_name: str, owner_birth: str,
                owner_phone: str, amount: int, installment: int) -> PaymentResult:
     digits = "".join(ch for ch in card_number if ch.isdigit())
     if len(digits) < 14 or len(digits) > 16:
-        return PaymentResult(False, message="카드번호를 확인해 주세요.")
+        return PaymentResult(False, message="카드번호를 다시 확인해 주세요.")
     if digits == TEST_DECLINE:
-        return PaymentResult(False, message="카드사 승인 거절(테스트 카드)")
+        return PaymentResult(False, message="카드사에서 승인이 거절되었습니다. (승인 거절 테스트 카드)")
     if len(expiry.replace("/", "")) != 4:
-        return PaymentResult(False, message="유효기간(MM/YY)을 확인해 주세요.")
+        return PaymentResult(False, message="유효기간을 MM/YY 형식으로 입력해 주세요.")
     return PaymentResult(
         True,
         tid="T" + secrets.token_hex(8).upper(),

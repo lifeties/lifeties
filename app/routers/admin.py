@@ -32,7 +32,7 @@ def login(request: Request, db: Session = Depends(get_db), uid: str = Form(...),
     if uid != ADMIN_ID or pw != ADMIN_PASSWORD:
         core.audit(db, uid, "admin.login_failed")
         db.commit()
-        flash(request, "아이디 또는 비밀번호가 맞지 않습니다.", "err")
+        flash(request, "아이디 또는 비밀번호가 일치하지 않습니다.", "err")
         return redirect("/admin/login")
     request.session["admin"] = uid
     core.audit(db, uid, "admin.login")
@@ -144,7 +144,7 @@ def verify(eid: int, request: Request, db: Session = Depends(get_db), decision: 
         ev.verify_note = note or "식장 예약을 확인할 수 없음"
     core.audit(db, who, f"event.{decision}", f"event:{ev.code}", ev.verify_note)
     db.commit()
-    flash(request, "처리했습니다.")
+    flash(request, "처리가 완료되었습니다.")
     return redirect(f"/admin/events/{eid}")
 
 
@@ -155,7 +155,7 @@ def reveal(eid: int, request: Request, db: Session = Depends(get_db), reason: st
     if not who:
         return redirect("/admin/login")
     if len(reason.strip()) < 4:
-        flash(request, "열람 사유를 구체적으로 적어 주세요.", "err")
+        flash(request, "열람 사유를 구체적으로 입력해 주세요.", "err")
         return redirect(f"/admin/events/{eid}")
     request.session["reveal"] = True
     core.audit(db, who, "pii.revealed", f"event:{eid}", reason.strip())
@@ -169,7 +169,7 @@ def settle(eid: int, request: Request, db: Session = Depends(get_db)):
     ev = db.get(Event, eid)
     try:
         st = core.execute_settlement(db, ev, who)
-        flash(request, f"정산 {core.won(st.net)}을 지급했습니다(지급번호 {st.pg_payout_id}).")
+        flash(request, f"정산금 {core.won(st.net)}을 지급했습니다. (지급번호 {st.pg_payout_id})")
     except core.RuleError as e:
         flash(request, str(e), "err")
     return redirect(f"/admin/events/{eid}")
@@ -205,8 +205,8 @@ def review(aid: int, request: Request, db: Session = Depends(get_db), decision: 
     a = db.get(RiskAlert, aid)
     try:
         core.review_alert(db, a, who, decision, note)
-        flash(request, "경보를 처리했습니다." if decision == "cleared"
-              else "의심거래로 판단해 제휴사 보고책임자에게 FIU 보고를 요청했습니다.")
+        flash(request, "경보를 처리가 완료되었습니다." if decision == "cleared"
+              else "의심거래로 판단하여 제휴사 보고책임자에게 보고를 요청했습니다.")
     except core.RuleError as e:
         flash(request, str(e), "err")
     return redirect("/admin/alerts")
@@ -230,7 +230,7 @@ def answer(qid: int, request: Request, db: Session = Depends(get_db), answer: st
     send_sms(db, q.phone, f"[LifeTies] 문의 답변: {answer}")
     core.audit(db, who, "inquiry.answered", f"inquiry:{qid}")
     db.commit()
-    flash(request, "답변을 보냈습니다.")
+    flash(request, "답변을 발송했습니다.")
     return redirect("/admin/inquiries")
 
 
@@ -268,7 +268,7 @@ async def save_settings(request: Request, db: Session = Depends(get_db)):
     if changed:
         core.audit(db, who, "settings.changed", "", "; ".join(changed))
     db.commit()
-    flash(request, f"{len(changed)}개 기준값을 바꿨습니다." if changed else "바뀐 값이 없습니다.")
+    flash(request, f"{len(changed)}건의 기준값이 변경되었습니다." if changed else "변경된 항목이 없습니다.")
     return redirect("/admin/settings")
 
 
@@ -276,5 +276,5 @@ async def save_settings(request: Request, db: Session = Depends(get_db)):
 def purge(request: Request, db: Session = Depends(get_db)):
     who = admin(request)
     n = core.purge_expired(db, who)
-    flash(request, f"보존기간이 지난 하객 정보 {n}건을 파기(비식별)했습니다.")
+    flash(request, f"보존기간이 경과한 하객 정보 {n}건을 파기(비식별 처리)했습니다.")
     return redirect("/admin/settings")

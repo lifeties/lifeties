@@ -29,7 +29,7 @@ def login(request: Request, db: Session = Depends(get_db), venue_id: int = Form(
           staff_code: str = Form(...)):
     v = db.get(Venue, venue_id)
     if not v or v.staff_code != staff_code:
-        flash(request, "식장 코드가 맞지 않습니다.", "err")
+        flash(request, "식장 코드가 일치하지 않습니다.", "err")
         return redirect("/venue/login")
     request.session["venue_id"] = v.id
     return redirect("/venue")
@@ -54,11 +54,11 @@ def scan(request: Request, db: Session = Depends(get_db), code: str = Form(...))
     code = code.strip().upper().replace("LIFETIES-TICKET:", "")
     g = db.scalar(select(Gift).where(Gift.ticket_code == code))
     if not g or g.event.venue_id != v.id:
-        result = ("err", "이 식장의 식권이 아닙니다.")
+        result = ("err", "본 식장에서 발급된 식권이 아닙니다.")
     elif g.status in ("cancelled", "returned"):
-        result = ("err", "취소된 결제의 식권입니다.")
+        result = ("err", "결제가 취소된 식권입니다.")
     elif g.ticket_used_at:
-        result = ("warn", f"이미 사용한 식권입니다({g.ticket_used_at:%H:%M}).")
+        result = ("warn", f"이미 사용된 식권입니다({g.ticket_used_at:%H:%M}).")
     elif g.event.event_date != date.today():
         result = ("err", f"행사일({g.event.event_date})이 아닙니다.")
     else:

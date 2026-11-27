@@ -8,9 +8,9 @@ from ..db import SessionLocal
 _cache: dict[str, int] = {}
 
 LABELS = {
-    "limit_per_gift": ("1건 결제 한도", "원"),
-    "limit_per_event": ("행사당 총액 한도", "원"),
-    "limit_guest_monthly": ("하객 1인 월 누적 한도", "원"),
+    "limit_per_gift": ("1회 결제 한도", "원"),
+    "limit_per_event": ("행사별 수납 한도", "원"),
+    "limit_guest_monthly": ("하객 1인 월 결제 한도", "원"),
     "limit_host_events_per_year": ("혼주(상주) 1인 연간 행사 개설", "회"),
     "settlement_hold_days": ("정산 대기(행사일 이후)", "일"),
     "gift_window_days_after": ("행사 후 결제 허용 기간", "일"),

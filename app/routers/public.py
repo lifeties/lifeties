@@ -45,7 +45,7 @@ def pay(code: str, request: Request, db: Session = Depends(get_db),
     if not ev:
         return redirect("/")
     if not agree:
-        flash(request, "이용약관과 취소·환불 안내에 동의해 주세요.", "err")
+        flash(request, "이용약관 및 취소·환불 정책에 동의해 주세요.", "err")
         return redirect(f"/i/{code}#gift")
     try:
         g = core.pay_gift(db, ev, guest_name=guest_name, guest_phone=guest_phone,
@@ -79,7 +79,7 @@ def cancel(token: str, request: Request, db: Session = Depends(get_db)):
     try:
         core.cancel_gift(db, g, "guest", "하객 직접 취소")
         db.commit()
-        flash(request, "결제를 취소했습니다. 카드사 승인 취소는 영업일 기준 3~5일 걸릴 수 있습니다.")
+        flash(request, "결제가 취소되었습니다. 카드사 승인 취소에는 영업일 기준 3~5일이 소요될 수 있습니다.")
     except core.RuleError as e:
         flash(request, str(e), "err")
     return redirect(f"/g/{token}")
@@ -91,7 +91,7 @@ def return_request(token: str, request: Request, db: Session = Depends(get_db),
     g = _gift(db, token)
     try:
         core.request_return(db, g, body)
-        flash(request, "반환 요청을 접수했습니다. 혼주(상주) 동의 후 결과를 문자로 알려 드립니다.")
+        flash(request, "반환 요청이 접수되었습니다. 혼주(상주) 동의 후 결과를 문자로 안내드립니다.")
     except core.RuleError as e:
         flash(request, str(e), "err")
     return redirect(f"/g/{token}")
@@ -120,5 +120,5 @@ def support_post(request: Request, db: Session = Depends(get_db), name: str = Fo
                    name=name, phone=phone, body=body))
     core.audit(db, "guest", "inquiry.created", "", kind)
     db.commit()
-    flash(request, "문의를 접수했습니다. 15일 이내에 문자로 답변드립니다.")
+    flash(request, "문의가 접수되었습니다. 15일 이내에 문자로 답변드립니다.")
     return redirect("/support")

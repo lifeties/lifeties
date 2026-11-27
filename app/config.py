@@ -35,8 +35,8 @@ ALLOWED_UPLOAD_TYPES = {
 # 숫자는 데모용 예시이며, 실제 값은 금융위 협의·제휴사 기준으로 확정해야 합니다.
 DEFAULT_SETTINGS = {
     "limit_per_gift": 500_000,          # 1건 한도
-    "limit_per_event": 30_000_000,      # 행사당 총액 한도
-    "limit_guest_monthly": 2_000_000,   # 하객 1인 월 누적 한도
+    "limit_per_event": 30_000_000,      # 행사별 수납 한도
+    "limit_guest_monthly": 2_000_000,   # 하객 1인 월 결제 한도
     "limit_host_events_per_year": 3,    # 혼주(상주) 1인 연간 행사 개설 횟수
     "settlement_hold_days": 3,          # 행사일로부터 정산 가능까지 대기 일수
     "gift_window_days_after": 7,        # 행사일 이후 결제 허용 일수
