@@ -1,0 +1,10 @@
+{% extends "base.html" %}{% block area %}혼주·상주{% endblock %}{% block nav %}<a class="on" href="/host">내 행사</a><a href="/host/bank">정산 계좌</a><a href="/host/logout">로그아웃</a>{% endblock %}{% block content %}
+<div class="side" style="justify-content:space-between"><h1>{{ u.name }} 님의 행사</h1><a class="btn" href="/host/events/new">+ 행사 등록</a></div>
+{% if not u.bank_verified_at %}<div class="flash warn">정산 계좌가 아직 없습니다. <a href="/host/bank">본인 명의 계좌 1원 인증 →</a></div>
+{% else %}<p class="small muted">정산 계좌: {{ u.bank_name }} {{ u.bank_account|mask_account }} (본인 명의 확인)</p>{% endif %}
+<div class="card"><table><tr><th>행사</th><th>일자</th><th>상태</th><th class="num">결제</th><th class="num">금액</th><th>정산</th></tr>
+{% for e in events %}{% set t = totals(e) %}<tr><td><a href="/host/events/{{ e.id }}">{{ e.title }}</a><div class="small muted">{{ KIND[e.kind] }} · {{ e.venue.name if e.venue }}</div></td><td>{{ e.event_date }}</td>
+<td><span class="pill {{ 'ok' if e.status=='published' else ('err' if e.status in ('cancelled','rejected') else 'warn') }}">{{ EVENT_STATUS[e.status] }}</span></td>
+<td class="num">{{ t.count }}건</td><td class="num">{{ t.gross|won }}</td><td><span class="pill {{ 'ok' if e.settlement_status=='settled' else ('err' if e.settlement_status=='held' else '') }}">{{ SETTLE_STATUS[e.settlement_status] }}</span></td></tr>
+{% else %}<tr><td colspan="6" class="muted">아직 등록한 행사가 없습니다.</td></tr>{% endfor %}</table></div>
+{% endblock %}

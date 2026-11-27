@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% block area %}혼주·상주{% endblock %}{% block nav %}<a href="/host">내 행사</a>{% endblock %}{% block wrapclass %}narrow{% endblock %}{% block content %}
+<form class="card" method="post" enctype="multipart/form-data"><div class="eyebrow">Step 3</div><h2>행사 등록</h2>
+<label>구분</label><select name="kind"><option value="wedding">결혼식</option><option value="funeral">장례식</option><option value="other">기타 경조사</option></select>
+<label>제목</label><input name="title" required placeholder="예: 김지은 ♥ 최도윤 결혼합니다">
+<div class="row"><div><label>나의 역할</label><input name="host_role" required placeholder="신부 / 혼주 / 상주"></div><div><label>시간</label><input name="event_time" value="12:00"></div></div>
+<label>행사일</label><input type="date" name="event_date" required min="{{ today }}">
+<label>제휴 식장</label><select name="venue_id">{% for v in venues %}<option value="{{ v.id }}">{{ v.name }} ({{ '예식장' if v.kind=='wedding' else '장례식장' }})</option>{% endfor %}</select>
+<label>홀·호실</label><input name="hall" placeholder="예: 3층 그랜드홀">
+<label>안내 문구</label><textarea name="message"></textarea>
+<label>식장 계약서(결혼식 필수, JPG·PNG·PDF 10MB 이하)</label><input type="file" name="contract" accept=".jpg,.jpeg,.png,.pdf">
+<label class="check"><input type="checkbox" name="meal_tickets" value="true" checked> 결제한 하객에게 모바일 식권(QR) 발급</label>
+<div class="card tint small" style="margin:14px 0 0;padding:14px">등록 후 와이즈앤코가 식장에 예약 여부를 확인한 뒤 청첩장(부고)이 공개됩니다. 장례는 계약서 대신 제휴 장례식장 이용 확인으로 진행합니다. 행사 개설은 1년에 {{ 3 }}회까지 가능합니다.</div>
+<button class="btn block" style="margin-top:14px">등록하고 식장 확인 요청</button></form>
+{% endblock %}

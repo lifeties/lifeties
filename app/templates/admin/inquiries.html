@@ -1,0 +1,6 @@
+{% extends "base.html" %}{% block area %}운영자{% endblock %}{% block nav %}{% include "admin/_nav.html" %}{% endblock %}{% block content %}
+<h1>민원·문의</h1><p class="small muted">접수 후 15일 이내 처리. 반환 요청은 혼주(상주) 동의 절차로 처리됩니다.</p>
+{% for q in rows %}{% set due = q.created_at + timedelta(days=15) %}<div class="card"><div class="side" style="justify-content:space-between"><div><span class="pill blue">{{ {'general':'일반','complaint':'민원','return_request':'반환 요청'}[q.kind] }}</span> <b>{{ q.name|mask_name }}</b> <span class="small muted">{{ q.created_at.strftime('%Y-%m-%d') }} · 기한 {{ due.strftime('%m-%d') }}</span></div>
+<span class="pill {{ 'ok' if q.resolved_at else ('err' if now>due else 'warn') }}">{{ '처리 완료' if q.resolved_at else ('기한 초과' if now>due else '처리 중') }}</span></div><p>{{ q.body }}</p>
+{% if q.answer %}<p class="small muted">답변: {{ q.answer }}</p>{% elif q.kind!='return_request' %}<form method="post" action="/admin/inquiries/{{ q.id }}" class="side"><input name="answer" required placeholder="답변" style="flex:1"><button class="btn sm">답변 발송</button></form>{% else %}<p class="small muted">혼주(상주) 동의 대기</p>{% endif %}</div>
+{% else %}<div class="card muted">접수된 문의가 없습니다.</div>{% endfor %}{% endblock %}

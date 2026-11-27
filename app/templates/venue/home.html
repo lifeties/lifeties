@@ -1,0 +1,10 @@
+{% extends "base.html" %}{% block area %}제휴 식장{% endblock %}{% block nav %}<a class="on" href="/venue">검표</a><a href="/venue/logout">로그아웃</a>{% endblock %}{% block content %}
+<h1>{{ v.name }}</h1>
+<div class="grid g2">
+<form class="card" method="post" action="/venue/scan"><div class="eyebrow">Check-in</div><h2>모바일 식권 확인</h2>
+<p class="small muted">하객의 QR을 스캐너로 읽거나 식권 번호 10자리를 입력합니다. 검표 기록은 행사가 실제로 열렸다는 확인 자료로 쓰입니다.</p>
+<input name="code" autofocus required placeholder="식권 번호" style="font-size:20px;letter-spacing:.1em" class="mono"><button class="btn block" style="margin-top:10px">확인</button>
+{% if last %}<div class="flash {{ last[0] }}" style="margin-top:14px;font-size:16px">{{ last[1] }}</div>{% endif %}</form>
+<div class="card"><h2>공개된 행사</h2><table><tr><th>행사</th><th>일자</th><th class="num">식권 사용</th></tr>
+{% for e in events %}{% set t = totals(e) %}<tr><td>{{ e.title }}<div class="small muted">{{ e.hall }} {{ e.event_time }}</div></td><td>{{ e.event_date }}{% if e.event_date==today %} <span class="pill blue">오늘</span>{% endif %}</td><td class="num">{{ t.used }}/{{ t.tickets }}</td></tr>{% endfor %}</table></div></div>
+{% endblock %}

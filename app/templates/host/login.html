@@ -1,0 +1,9 @@
+{% extends "base.html" %}{% block wrapclass %}narrow{% endblock %}{% block content %}
+<form class="card" method="post"><div class="eyebrow">Step 1</div><h2>휴대폰 본인인증</h2>
+<p class="small muted">행사를 여는 혼주·상주 본인만 정산받을 수 있도록 본인인증을 합니다. 주민등록번호는 받지 않습니다.</p>
+<label>이름</label><input name="name" required value="김지은">
+<label>생년월일 8자리</label><input name="birth" required value="19940312">
+<label>휴대폰</label><input name="phone" required value="010-1234-5678">
+<label class="check"><input type="checkbox" name="agree" value="true" checked> 개인정보 수집·이용 동의(본인인증 결과, 연락처, 정산 계좌, 행사 정보)</label>
+<button class="btn block" style="margin-top:14px">인증하고 시작(모의)</button></form>
+{% endblock %}

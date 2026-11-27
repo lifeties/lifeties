@@ -1,0 +1,27 @@
+{% extends "base.html" %}{% block area %}혼주·상주{% endblock %}{% block nav %}<a href="/host">내 행사</a><a href="/host/bank">정산 계좌</a>{% endblock %}{% block content %}
+<div class="side" style="justify-content:space-between"><div><div class="eyebrow">{{ KIND[ev.kind] }}</div><h1>{{ ev.title }}</h1>
+<p class="muted">{{ ev.event_date }} {{ ev.event_time }} · {{ ev.venue.name }} {{ ev.hall }}</p></div>
+<div><span class="pill {{ 'ok' if ev.status=='published' else 'warn' }}">{{ EVENT_STATUS[ev.status] }}</span> <span class="pill {{ 'err' if ev.settlement_status=='held' else ('ok' if ev.settlement_status=='settled' else '') }}">{{ SETTLE_STATUS[ev.settlement_status] }}</span></div></div>
+{% if ev.status=='pending_verify' %}<div class="flash warn">식장 예약을 확인하고 있습니다. 확인이 끝나면 문자로 알려 드리고 청첩장이 공개됩니다.</div>{% endif %}
+{% if ev.status=='rejected' %}<div class="flash err">식장 확인 반려: {{ ev.verify_note }}</div>{% endif %}
+{% if ev.status=='published' %}<div class="card tint"><b>공유 주소</b> <a class="mono" href="/i/{{ ev.code }}">{{ base }}/i/{{ ev.code }}</a> <span class="small muted">· 식장 확인: {{ ev.verify_note }}</span></div>{% endif %}
+<div class="grid g4"><div class="kpi"><span>결제</span><b>{{ t.count }}건</b></div><div class="kpi"><span>총액</span><b>{{ t.gross|won }}</b></div>
+<div class="kpi"><span>예상 수수료({{ '%.1f' % (s.fee_rate_bp/100) }}%)</span><b>{{ (t.gross*s.fee_rate_bp//10000)|won }}</b></div><div class="kpi"><span>식권 사용</span><b>{{ t.used }}/{{ t.tickets }}</b></div></div>
+<div class="card" style="margin-top:18px"><h2>정산</h2>
+{% if ev.settlement_status=='settled' %}<p>정산이 끝났습니다. {{ ev.host.bank_name }} {{ ev.host.bank_account|mask_account }}</p>
+{% elif ev.settlement_status=='held' %}<div class="flash warn">정산 보류: {{ ev.hold_reason }}</div><p class="small muted">담당자 검토 후 보류가 풀리면 자동으로 정산 대기 상태가 됩니다.</p>
+{% elif ev.settlement_status=='requested' %}<p>정산 대기 중입니다. 운영 확인 후 본인 명의 계좌로 입금됩니다.</p>
+{% else %}<p class="small muted">정산은 행사일로부터 {{ s.settlement_hold_days }}일 후({{ settle_on }})부터 신청할 수 있습니다. 행사 전 인출은 할 수 없습니다.</p>
+<form method="post" action="/host/events/{{ ev.id }}/settle"><button class="btn" {{ 'disabled style=opacity:.5' if today < settle_on or ev.status!='published' }}>정산 신청</button></form>{% endif %}
+</div>
+<div class="card"><h2>받은 마음 <span class="muted small">{{ t.count }}건</span></h2><table><tr><th>이름</th><th>관계</th><th class="num">금액</th><th>메시지</th><th>상태</th><th>식권</th></tr>
+{% for g in ev.gifts %}<tr><td>{{ g.guest_name }}</td><td>{{ g.relation }}</td><td class="num">{{ g.amount|won }}</td><td class="small">{{ g.message }}</td><td><span class="pill {{ 'err' if g.status=='cancelled' else '' }}">{{ GIFT_STATUS[g.status] }}</span></td><td>{{ '✓' if g.ticket_used_at else '' }}</td></tr>
+{% else %}<tr><td colspan="6" class="muted">아직 결제가 없습니다.</td></tr>{% endfor %}</table>
+<p class="small muted">하객 연락처와 카드 정보는 보이지 않습니다.</p></div>
+{% if returns %}<div class="card"><h2>반환 요청</h2>{% for q in returns %}<div style="border-bottom:1px solid var(--line);padding:10px 0"><b>{{ q.name }}</b> · {{ q.body }} <span class="pill">{{ q.status }}</span>
+{% if q.status=='host_pending' %}<form method="post" action="/host/returns/{{ q.id }}" class="side" style="margin-top:8px"><button class="btn sm" name="agree" value="yes">반환 동의</button><button class="btn sm ghost" name="agree" value="no">동의 안 함</button></form>{% else %}<div class="small muted">{{ q.answer }}</div>{% endif %}</div>{% endfor %}</div>{% endif %}
+<div class="grid g2">
+<form class="card" method="post" action="/host/events/{{ ev.id }}/thanks"><h3>감사 문자 보내기</h3><textarea name="body" required>보내주신 마음 감사히 받았습니다. 늘 건강하시고 행복하세요.</textarea><button class="btn ghost" style="margin-top:8px">아직 안 보낸 분께 발송(모의)</button></form>
+{% if ev.status in ('published','pending_verify') and ev.settlement_status!='settled' %}<form class="card" method="post" action="/host/events/{{ ev.id }}/cancel" onsubmit="return confirm('행사를 취소하면 정산 전 결제가 모두 자동 취소됩니다. 진행할까요?')"><h3>행사 취소·연기</h3><p class="small muted">취소하면 정산 전 결제 전액이 자동 취소되고 하객에게 문자로 안내됩니다.</p><input name="reason" required placeholder="사유"><button class="btn danger" style="margin-top:8px">행사 취소</button></form>{% endif %}
+</div>
+{% endblock %}

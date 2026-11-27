@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% block area %}운영자{% endblock %}{% block nav %}{% include "admin/_nav.html" %}{% endblock %}{% block content %}
+<h1>운영 현황</h1>
+<div class="eyebrow" style="margin:14px 0 8px">성과 지표</div>
+<div class="grid g4"><div class="kpi"><span>가입 혼주·상주</span><b>{{ k.hosts }}명</b></div><div class="kpi"><span>공개 행사 / 전체</span><b>{{ k.published }} / {{ k.events }}</b></div><div class="kpi"><span>결제 건수</span><b>{{ k.gifts }}건</b></div><div class="kpi"><span>결제 금액</span><b>{{ k.volume|won }}</b></div></div>
+<div class="eyebrow" style="margin:18px 0 8px">위험관리 지표</div>
+<div class="grid g4"><div class="kpi"><span>이상거래 경보(미처리)</span><b>{{ k.alerts }} ({{ k.alerts_open }})</b></div><div class="kpi"><span>보류 행사 · 해제율</span><b>{{ k.held_events }} · {{ k.clear_rate }}%</b></div><div class="kpi"><span>의심거래 보고 요청</span><b>{{ k.reported }}건</b></div><div class="kpi"><span>한도 등 결제 차단</span><b>{{ k.blocked }}건</b></div></div>
+<div class="eyebrow" style="margin:18px 0 8px">소비자보호 지표</div>
+<div class="grid g4"><div class="kpi"><span>식권 사용률</span><b>{{ k.checkin_pct }}%</b></div><div class="kpi"><span>결제 취소율</span><b>{{ k.cancel_rate }}%</b></div><div class="kpi"><span>민원(미처리)</span><b>{{ k.inquiries }} ({{ k.inq_open }})</b></div><div class="kpi"><span>평균 처리 기간</span><b>{{ k.avg_days }}일</b></div></div>
+<div class="grid g2" style="margin-top:18px">
+<div class="card"><h2>식장 확인 대기 <span class="pill warn">{{ queue|length }}</span></h2>{% for e in queue %}<p><a href="/admin/events/{{ e.id }}">{{ e.title }}</a> <span class="small muted">{{ e.venue.name }} · {{ e.event_date }}</span></p>{% else %}<p class="muted">없음</p>{% endfor %}</div>
+<div class="card"><h2>미처리 경보 <span class="pill err">{{ open_alerts|length }}</span></h2>{% for a in open_alerts[:6] %}<p><span class="pill {{ 'err' if a.severity=='high' else 'warn' }}">{{ RULE_NAMES[a.rule] }}</span> <a href="/admin/events/{{ a.event_id }}">{{ a.event.title }}</a></p>{% else %}<p class="muted">없음</p>{% endfor %}<a href="/admin/alerts">경보 검토 →</a></div>
+<div class="card"><h2>정산 대기</h2>{% for e in to_pay %}<p><a href="/admin/events/{{ e.id }}">{{ e.title }}</a></p>{% else %}<p class="muted">없음</p>{% endfor %}</div>
+<div class="card"><h2>정산 보류</h2>{% for e in held %}<p><a href="/admin/events/{{ e.id }}">{{ e.title }}</a><br><span class="small muted">{{ e.hold_reason }}</span></p>{% else %}<p class="muted">없음</p>{% endfor %}</div>
+</div>{% endblock %}

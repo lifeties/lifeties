@@ -1,0 +1,43 @@
+{% extends "base.html" %}{% block title %}{{ ev.title }}{% endblock %}{% block wrapclass %}narrow{% endblock %}{% block content %}
+<div class="inv">
+ <div class="hero {{ 'funeral' if ev.kind=='funeral' }}">
+  <div class="eyebrow" style="color:#C7CDF5">{{ KIND[ev.kind] }}</div>
+  <h1>{{ ev.title }}</h1>
+  <p>{{ ev.event_date.strftime('%Y년 %m월 %d일') }} {{ ev.event_time }}</p>
+  <p>{{ ev.venue.name }} {{ ev.hall }}</p>
+ </div>
+ <div style="padding:22px">
+  {% if ev.message %}<p style="white-space:pre-line">{{ ev.message }}</p>{% endif %}
+  <p class="small"><span class="pill ok">✓ 식장 확인 완료</span> <span class="muted">와이즈앤코가 {{ ev.venue.name }}에 예약을 확인했습니다.</span></p>
+ </div>
+</div>
+{% if ev.status == 'cancelled' %}
+<div class="flash err" style="margin-top:18px">취소된 행사입니다. 결제하신 금액은 모두 자동 취소되었습니다.</div>
+{% else %}
+<form class="card" id="gift" method="post" action="/i/{{ ev.code }}/pay" style="margin-top:18px">
+ <h2>{{ '축의금' if ev.kind=='wedding' else ('조의금' if ev.kind=='funeral' else '경조금') }} 보내기</h2>
+ <p class="small muted">신용카드로 결제하면 행사 확인 후 {{ ev.host_role }} 본인 명의 계좌로 정산됩니다. 연락처·계좌는 서로에게 공개되지 않습니다.</p>
+ {% for kind, msg in [] %}{% endfor %}
+ <label>금액</label>
+ <input name="amount" id="amount" type="number" min="10000" step="1000" max="{{ s.limit_per_gift }}" required placeholder="예: 100000">
+ <div class="amounts">{% for a in [50000,100000,200000,300000] %}<button type="button" onclick="document.getElementById('amount').value={{ a }}">{{ (a//10000) }}만원</button>{% endfor %}</div>
+ <p class="small muted">1건 최대 {{ s.limit_per_gift|won }} · 하객 1인 월 {{ s.limit_guest_monthly|won }}</p>
+ <div class="row"><div><label>보내는 분</label><input name="guest_name" required></div><div><label>관계</label><input name="relation" placeholder="예: 대학 동기"></div></div>
+ <div class="row"><div><label>생년월일(8자리)</label><input name="guest_birth" required pattern="\d{8}" placeholder="19900101"></div><div><label>휴대폰</label><input name="guest_phone" required placeholder="010-0000-0000"></div></div>
+ <label>전하는 말(선택)</label><textarea name="message" maxlength="300"></textarea>
+ <h3 style="margin-top:20px">카드 정보 <span class="pill">모의 결제</span></h3>
+ <label>카드번호</label><input name="card_number" required inputmode="numeric" placeholder="0000 0000 0000 0000">
+ <div class="row"><div><label>유효기간</label><input name="expiry" required placeholder="MM/YY"></div>
+ <div><label>할부</label><select name="installment"><option value="0">일시불</option><option value="2">2개월</option><option value="3">3개월</option></select></div></div>
+ <label class="check"><input type="checkbox" name="is_corporate" value="true" onchange="document.getElementById('corp').style.display=this.checked?'block':'none'"> 법인카드(지급확인서 발급)</label>
+ <div id="corp" style="display:none"><input name="corp_name" placeholder="법인명"></div>
+ <input type="hidden" name="device_id" id="device_id">
+ <div class="card tint small" style="margin:16px 0 0;padding:14px">
+  <b>취소·환불 안내</b><br>· 정산 전({{ ev.event_date.strftime('%m/%d') }} + {{ s.settlement_hold_days }}일)까지는 영수증 화면에서 바로 취소할 수 있습니다.<br>· 행사가 취소되면 결제는 자동 취소됩니다.<br>· 정산 후에는 반환 요청을 접수해 {{ ev.host_role }} 동의를 거쳐 처리합니다.
+ </div>
+ <label class="check"><input type="checkbox" name="agree" value="true"> 이용약관, 개인정보 수집·이용, 취소·환불 안내에 동의합니다.</label>
+ <button class="btn block" style="margin-top:12px">결제하기</button>
+</form>
+<script>try{let d=localStorage.getItem('lt_dev');if(!d){d='D'+Math.random().toString(36).slice(2,12);localStorage.setItem('lt_dev',d)}document.getElementById('device_id').value=d}catch(e){}</script>
+{% endif %}
+{% endblock %}

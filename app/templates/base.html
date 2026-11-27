@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}LifeTies 데모{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/app.css"></head>
+<body>
+<div class="demo-banner">데모 버전 · 결제·본인인증·계좌인증·문자는 모두 모의(mock)로 동작하며 실제 돈이 오가지 않습니다</div>
+<header class="top"><div class="in"><a class="brand" href="/">LifeTies<small>{% block area %}경조금 간편 수납{% endblock %}</small></a>
+<nav class="nav">{% block nav %}<a href="/host">혼주·상주</a><a href="/venue">식장</a><a href="/admin">운영자</a><a href="/support">고객센터</a>{% endblock %}</nav></div></header>
+<main class="wrap {% block wrapclass %}{% endblock %}">
+{% for kind, msg in flashes %}<div class="flash {{ kind }}">{{ msg }}</div>{% endfor %}
+{% block content %}{% endblock %}
+</main>
+<div class="footer">㈜와이즈앤코 · 행사 검증형 경조금 신용카드 간편 수납 서비스(혁신금융서비스 지정 신청 데모)</div>
+</body></html>

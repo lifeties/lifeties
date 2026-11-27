@@ -1,0 +1,26 @@
+{% extends "base.html" %}{% block title %}결제 영수증{% endblock %}{% block wrapclass %}narrow{% endblock %}{% block content %}
+<div class="card">
+ <div class="side"><h2 style="margin:0">결제 영수증</h2><span class="pill {{ 'err' if g.status in ('cancelled','returned') else ('warn' if g.status=='return_requested' else 'ok') }}">{{ GIFT_STATUS[g.status] }}</span></div>
+ <dl class="kv" style="margin-top:14px">
+  <dt>행사</dt><dd>{{ ev.title }}</dd><dt>일시</dt><dd>{{ ev.event_date }} {{ ev.event_time }} · {{ ev.venue.name }}</dd>
+  <dt>보내는 분</dt><dd>{{ g.guest_name }}{% if g.relation %} ({{ g.relation }}){% endif %}</dd>
+  <dt>금액</dt><dd><b>{{ g.amount|won }}</b> · {{ '일시불' if not g.installment_months else g.installment_months ~ '개월 할부' }}</dd>
+  <dt>카드</dt><dd>{{ g.card_brand }} ****{{ g.card_last4 }}</dd><dt>승인번호</dt><dd class="mono">{{ g.pg_tid }}</dd>
+  <dt>결제일시</dt><dd>{{ g.created_at.strftime('%Y-%m-%d %H:%M') }}</dd>
+ </dl>
+</div>
+{% if qr %}<div class="card"><div class="ticket"><div class="eyebrow">Mobile Meal Ticket</div><h3>모바일 식권</h3>{{ qr|safe }}<div class="mono" style="font-size:18px;letter-spacing:.15em">{{ g.ticket_code }}</div>
+<p class="small muted">{% if g.ticket_used_at %}<span class="pill ok">사용 완료 {{ g.ticket_used_at.strftime('%H:%M') }}</span>{% else %}식장 입구에서 QR을 보여 주세요. 행사 당일에만 사용할 수 있습니다.{% endif %}</p></div></div>{% endif %}
+<div class="card">
+ {% if g.status == 'paid' %}
+  <h3>결제 취소</h3><p class="small muted">정산 전이라 바로 취소할 수 있습니다.</p>
+  <form method="post" action="/g/{{ token }}/cancel" onsubmit="return confirm('결제를 취소할까요?')"><button class="btn danger">결제 취소</button></form>
+ {% elif g.status == 'settled' %}
+  <h3>반환 요청</h3><p class="small muted">이미 정산되었습니다. 반환 요청을 남기면 {{ ev.host_role }} 동의 후 처리되며, 결과는 문자로 알려 드립니다.</p>
+  <form method="post" action="/g/{{ token }}/return"><textarea name="body" required placeholder="반환 사유"></textarea><button class="btn ghost" style="margin-top:8px">반환 요청</button></form>
+ {% elif g.status == 'return_requested' %}<p>반환 요청을 접수했습니다. {{ ev.host_role }} 동의를 기다리고 있습니다.</p>
+ {% endif %}
+ {% if g.status != 'cancelled' %}<p style="margin-top:14px"><a href="/g/{{ token }}/certificate">경조금 지급확인서 보기 →</a></p>{% endif %}
+</div>
+<p class="small muted">이 화면 주소를 저장해 두면 언제든 다시 볼 수 있습니다. 문의: <a href="/support">고객센터</a></p>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "base.html" %}{% block content %}
+<div class="card tint"><div class="eyebrow">Demo</div><h1>행사 검증형 경조금 신용카드 간편 수납</h1>
+<p>하객은 모바일 청첩장·부고에서 신용카드로 축의금·조의금을 보내고, 혼주(상주)는 행사 확인 후 본인 명의 계좌로 정산받습니다. 신청서의 모든 절차를 화면으로 확인할 수 있습니다.</p></div>
+<div class="grid g3">
+<div class="card"><h3>① 혼주·상주</h3><p class="small muted">본인인증 → 정산계좌 1원 인증 → 행사 등록(계약서 첨부) → 결제 현황 → 정산 신청 · 행사 취소 · 반환 동의 · 감사 문자</p><a class="btn sm" href="/host/login">혼주로 시작</a></div>
+<div class="card"><h3>② 하객</h3><p class="small muted">청첩장·부고 → 금액·할부(최대 3개월) → 카드결제(모의) → 영수증·모바일 식권 QR → 정산 전 취소 · 정산 후 반환 요청 · 법인 지급확인서</p>{% for e in samples %}<a class="btn sm ghost" style="margin:2px 4px 2px 0" href="/i/{{ e.code }}">{{ KIND[e.kind] }} 예시</a>{% endfor %}</div>
+<div class="card"><h3>③ 식장 · 운영자</h3><p class="small muted">식장: 식권 QR 검표(행사 실재 확인) · 운영자: 식장 예약 확인, 이상거래 경보 검토, 정산 보류·지급, 민원, 감사 로그, 한도 설정</p><a class="btn sm ghost" href="/venue/login">식장</a> <a class="btn sm ghost" href="/admin/login">운영자</a></div>
+</div>
+<div class="card"><h2>데모 계정</h2><table>
+<tr><th>역할</th><th>로그인</th><th>비고</th></tr>
+<tr><td>혼주(신부)</td><td>김지은 · 19940312 · 010-1234-5678</td><td>지난주 결혼식 → 정산 신청 가능</td></tr>
+<tr><td>상주</td><td>박민수 · 19700521 · 010-2345-6789</td><td>오늘 장례 · 정산은 행사일+3일부터</td></tr>
+<tr><td>혼주(신랑)</td><td>이선호 · 19881102 · 010-3456-7890</td><td>이상거래 경보 → 정산 자동 보류 사례</td></tr>
+<tr><td>식장</td><td>더채플 앳 마포 / 코드 1111 · 한빛병원 장례식장 / 2222</td><td>식권 검표</td></tr>
+<tr><td>운영자</td><td>admin / admin1234</td><td></td></tr>
+<tr><td>테스트 카드</td><td class="mono">아무 16자리 · 4000 0000 0000 0002는 승인 거절</td><td>유효기간 MM/YY 아무 값</td></tr>
+</table></div>
+{% endblock %}

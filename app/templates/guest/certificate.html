@@ -1,0 +1,15 @@
+{% extends "base.html" %}{% block title %}경조금 지급확인서{% endblock %}{% block content %}
+<div class="cert">
+ <div style="text-align:center"><div class="eyebrow">Certificate</div><h1>경조금 지급확인서</h1><p class="muted small">발급번호 LT-{{ '%06d' % g.id }}-{{ g.pg_tid[-6:] }}</p></div>
+ <dl class="kv" style="margin:28px 0;grid-template-columns:140px 1fr">
+  {% if g.is_corporate %}<dt>지급 법인</dt><dd>{{ g.corp_name }}</dd>{% endif %}
+  <dt>지급인</dt><dd>{{ g.guest_name }}</dd><dt>경조사 구분</dt><dd>{{ KIND[ev.kind] }}</dd>
+  <dt>행사</dt><dd>{{ ev.title }}</dd><dt>행사일·장소</dt><dd>{{ ev.event_date }} · {{ ev.venue.name }}</dd>
+  <dt>수령인</dt><dd>{{ ev.host.name|mask_name }} ({{ ev.host_role }})</dd>
+  <dt>지급액</dt><dd><b>{{ g.amount|won }}</b></dd><dt>결제수단</dt><dd>신용카드 {{ g.card_brand }} ****{{ g.card_last4 }} (승인 {{ g.pg_tid }})</dd>
+  <dt>결제일</dt><dd>{{ g.created_at.strftime('%Y-%m-%d') }}</dd><dt>상태</dt><dd>{{ GIFT_STATUS[g.status] }}</dd>
+ </dl>
+ <p class="small muted">위 금액을 경조금으로 지급하였음을 확인합니다. 행사 실재는 제휴 식장 예약 확인으로 검증되었습니다.</p>
+ <p style="text-align:right;margin-top:30px">{{ today.strftime('%Y년 %m월 %d일') }}<br><b>㈜와이즈앤코</b> (LifeTies)</p>
+ <button class="btn ghost noprint" onclick="print()">인쇄 / PDF 저장</button>
+</div>{% endblock %}

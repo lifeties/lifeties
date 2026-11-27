@@ -1,0 +1,4 @@
+{% extends "base.html" %}{% block area %}운영자{% endblock %}{% block nav %}{% include "admin/_nav.html" %}{% endblock %}{% block content %}
+<h1>행사</h1><p class="side">{% for k,v in [('','전체')]+EVENT_STATUS.items()|list %}<a class="btn sm {{ '' if status==k else 'ghost' }}" href="?status={{ k }}">{{ v }}</a>{% endfor %}</p>
+<div class="card"><table><tr><th>코드</th><th>행사</th><th>혼주·상주</th><th>일자</th><th>상태</th><th class="num">결제</th><th>정산</th></tr>
+{% for e in events %}{% set t=totals(e) %}<tr><td class="mono">{{ e.code }}</td><td><a href="/admin/events/{{ e.id }}">{{ e.title }}</a></td><td>{{ e.host.name|mask_name }}</td><td>{{ e.event_date }}</td><td><span class="pill">{{ EVENT_STATUS[e.status] }}</span></td><td class="num">{{ t.gross|won }}</td><td><span class="pill {{ 'err' if e.settlement_status=='held' }}">{{ SETTLE_STATUS[e.settlement_status] }}</span></td></tr>{% endfor %}</table></div>{% endblock %}
