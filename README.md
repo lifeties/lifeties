@@ -3,9 +3,14 @@
 ㈜와이즈앤코 혁신금융서비스 지정 신청서의 서비스 흐름을 그대로 동작하는 화면으로 구현한 데모입니다.
 **결제·본인인증·1원 계좌인증·정산 이체·문자 발송은 모두 모의(mock)이며 실제 돈이 오가지 않습니다.**
 
-## 실행
+## 바로 보기 (설치 없이)
+
+**https://lifeties.github.io/lifeties/** — 휴대폰·PC 브라우저에서 바로 열립니다. `docs/` 폴더의 브라우저 전용 버전으로, 서버 버전과 같은 업무 규칙을 자바스크립트로 옮긴 것입니다. 데이터는 보는 사람의 브라우저에만 저장되며, 첫 화면의 "처음 상태로 되돌리기"로 초기화할 수 있습니다.
+
+## 서버 버전 실행 (Python 3.10 이상)
 
 ```bash
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 python -m app.seed                 # 데모 데이터로 DB 초기화
 uvicorn app.main:app --reload      # http://localhost:8000
@@ -43,6 +48,7 @@ app/
   routers/           public(하객) · host · venue · admin
   templates/, static/app.css
 tests/test_flow.py   신청서 절차 통합 테스트
+docs/                GitHub Pages용 브라우저 전용 데모(index.html, app.js) · 대응표 · 화면 캡처
 ```
 
 ## 실제 연동 시 바꿀 곳
